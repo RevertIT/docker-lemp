@@ -45,7 +45,7 @@ After downloading necessary docker images, it takes less than 30 seconds to depl
 
 - **phpMyAdmin Integration:**  
   - Configures phpMyAdmin to be accessible at `/phpmyadmin/` in the browser and shares same mariadb server across all containers.
-  - Accessible at `http://project_name.localhost/phpmyadmin/`
+  - Accessible at `http://project_name.localhost/phpmyadmin/` via Username: root :: Password: root
  
 
 ## **Useful commands**
