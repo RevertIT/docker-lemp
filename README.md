@@ -10,6 +10,10 @@ Similar to LEMP stack. (Nginx MariaDB PHP)
 
 Get the `setup_nginx_project.sh` file and double click on Windows if you have git installed, or via terminal `./setup_nginx_project.sh`
 
+The project name you type will be subdomain, for example if name of the project is skeleton, it will be accessible to `http://skeleton.localhost`
+
+You can make as many as you want projects.
+
 ## **Features**
 
 - **Deploy in less than 30 seconds:**
@@ -52,3 +56,5 @@ environment/ - the folder you will make to hold the script file
   `docker exec -it php_projectName /bin/bash`
 
  *By default, files inside your project folder are automatically linked with container volume, so any changes to your nginx/php files will be reflected without needing to access container as root*
+ 
+ *Accessing root will let you also install packages to the container server or updating existing or changing server settings*
