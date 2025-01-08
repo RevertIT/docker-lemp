@@ -55,6 +55,6 @@ environment/ - the folder you will make to hold the script file
   
   `docker exec -it php_projectName /bin/bash`
 
- *By default, files inside your project folder are automatically linked with container volume, so any changes to your nginx/php files will be reflected without needing to access container as root*
- 
- *Accessing root will let you also install packages to the container server or updating existing or changing server settings*
+   *By default, files inside your project folder are automatically linked with container volume, so any changes to your nginx/php files will be reflected without needing to access container as root*
+   
+   *Accessing root will let you also install packages to the container server or updating existing or changing server settings*
