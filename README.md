@@ -23,22 +23,22 @@ After downloading necessary docker images, it takes less than 30 seconds to depl
   Uses global nginx proxy to handle all created containers to correct project location when accesssing via subdomain. eg. http://project1.localhost
 
 - **Automated Directory Structure:**  
-```plaintext
-environment/ - the folder you will make to hold the script file
-└── nginx/ # Location for global nginx config
-    └── default.conf # Global nginx reverse proxy config
-└── www/ # Location for projects
-    └── <project_name>/
-        ├── public/
-        │   └── index.php      # Default PHP entry point
-        ├── nginx/
-        │   └── site.conf      # Project-specific Nginx configuration
-        ├── composer.json      # Composer initialization file
-        ├── composer.lock      # Composer lock file
-        └── docker-compose.yml # Docker Compose file for the project
-└── docker-compose.yml # Location for global nginx proxy docker compose file
-└── setup_nginx_project.sh # File we use to do all the magic
-```
+  ```plaintext
+  environment/ - the folder you will make to hold the script file
+  └── nginx/ # Location for global nginx config
+      └── default.conf # Global nginx reverse proxy config
+  └── www/ # Location for projects
+      └── <project_name>/
+          ├── public/
+          │   └── index.php      # Default PHP entry point
+          ├── nginx/
+          │   └── site.conf      # Project-specific Nginx configuration
+          ├── composer.json      # Composer initialization file
+          ├── composer.lock      # Composer lock file
+          └── docker-compose.yml # Docker Compose file for the project
+  └── docker-compose.yml # Location for global nginx proxy docker compose file
+  └── setup_nginx_project.sh # File we use to do all the magic
+  ```
 
 - **Composer-Ready Setup:**  
   Installs and initializes Composer in the project, enabling easy dependency management.
