@@ -60,7 +60,7 @@ server {
     }
 
     location / {
-        proxy_pass http://\$subdomain:80;
+        proxy_pass http://\$subdomain;
 
         # Pass necessary headers
         proxy_set_header Host \$host;
@@ -205,49 +205,77 @@ if [ -f "$NGINX_CONF" ]; then
 else
     cat > "$NGINX_CONF" <<EOL
 server {
-    listen 80;
-    server_name $PROJECT_NAME.localhost;
+    listen                  80;
+    server_name             $PROJECT_NAME.localhost;
+    set                     \$base /var/www/${PROJECT_NAME};
+    root                    \$base/public;
+
+    # index.php
+    index                   index.php;
 
     # Access and error logs inside the project folder
     access_log /var/www/${PROJECT_NAME}/logs/access.log;
     error_log /var/www/${PROJECT_NAME}/logs/error.log;
 
-    # Common security practices
-    # Disable unwanted HTTP methods
-    if (\$request_method !~ ^(GET|POST|HEAD)$) {
-        return 405;
-    }
-
-    # Prevent accessing hidden files (starting with dot)
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-
-    # Set security headers
-    add_header X-Content-Type-Options nosniff;
-    add_header X-Frame-Options SAMEORIGIN;
-    add_header X-XSS-Protection "1; mode=block";
+    # security headers
+    add_header X-XSS-Protection          "1; mode=block" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header Referrer-Policy           "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy   "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
+    add_header Permissions-Policy        "interest-cohort=()" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header Content-Security-Policy "default-src 'self';" always;
+
+    # . files
+    location ~ /\.(?!well-known) {
+      deny all;
+    }
+
+    # index.php fallback
+    location / {
+      try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    # favicon.ico
+    location = /favicon.ico {
+      log_not_found off;
+    }
+
+    # robots.txt
+    location = /robots.txt {
+      log_not_found off;
+    }
+
+    # assets, media
+    location ~* \.(?:css(\.map)?|js(\.map)?|jpe?g|png|gif|ico|cur|heic|webp|tiff?|mp3|m4a|aac|ogg|midi?|wav|mp4|mov|webm|mpe?g|avi|ogv|flv|wmv)$ {
+      expires 7d;
+    }
+
+    # svg, fonts
+    location ~* \.(?:svgz?|ttf|ttc|otf|eot|woff2?)$ {
+      add_header Access-Control-Allow-Origin "*";
+      expires    7d;
+    }
+
+    # gzip
+    gzip            on;
+    gzip_vary       on;
+    gzip_proxied    any;
+    gzip_comp_level 6;
+    gzip_types      text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
 
     # PHP handling
     location ~ \.php$ {
-        fastcgi_pass php_$PROJECT_NAME:9000;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME /var/www/${PROJECT_NAME}/public\$fastcgi_script_name;
-        include fastcgi_params;
-    }
+      fastcgi_pass                  php_$PROJECT_NAME:9000;
 
-    # Main file serving
-    location / {
-        root /var/www/${PROJECT_NAME}/public;
-        index index.php;
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
+      # default fastcgi_params
+      include                       fastcgi_params;
 
-    # Disable .git or other source control access
-    location ~ /\.git {
-        deny all;
+      # fastcgi settings
+      fastcgi_index                 index.php;
+      fastcgi_buffers               8 16k;
+      fastcgi_buffer_size           32k;
+
+      fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     }
 }
 EOL
@@ -296,6 +324,7 @@ services:
       - "9000"
     volumes:
       - ./:/var/www/${PROJECT_NAME}
+      - ./public:/var/www/${PROJECT_NAME}/public
     networks:
       - global_network
 
@@ -305,6 +334,7 @@ services:
     volumes:
       - ./nginx/site.conf:/etc/nginx/conf.d/${PROJECT_NAME}.conf # Mount config file
       - ./logs:/var/www/${PROJECT_NAME}/logs # Mount logs directory
+      - ./public:/var/www/${PROJECT_NAME}/public # Mount public directory here too for static content (which doesnt go from php fpm)
     networks:
       - global_network
 
@@ -324,7 +354,6 @@ else
 fi
 
 # Print success message
-# We are automatically running this, no need
 #echo "Project $PROJECT_NAME setup is complete!"
 #echo "To start the project, run:"
 #echo "docker-compose -f $PROJECT_DIR/docker-compose.yml up -d"
