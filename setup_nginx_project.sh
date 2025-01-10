@@ -30,7 +30,8 @@ BASE_DIR=$(pwd)
 # Global Nginx setup
 GLOBAL_NGINX_DIR="$BASE_DIR/nginx"
 GLOBAL_NGINX_COMPOSE="$BASE_DIR/docker-compose.yml"
-GLOBAL_NGINX_CONFIG="$GLOBAL_NGINX_DIR/default.conf"
+GLOBAL_NGINX_PROXY="$GLOBAL_NGINX_DIR/_proxy.conf"
+GLOBAL_NGINX_CONFIG="$GLOBAL_NGINX_DIR/nginx.conf"
 
 # Ensure the global proxy exists and is running
 echo "Checking global Nginx reverse proxy setup..."
@@ -42,8 +43,50 @@ fi
 
 # Create Global Nginx Configuration
 if [ ! -f "$GLOBAL_NGINX_CONFIG" ]; then
-    echo "Global Nginx configuration not found. Creating..."
+    echo "Global Nginx nginx.conf config not found. Creating..."
     cat > "$GLOBAL_NGINX_CONFIG" <<EOL
+user                  nginx;
+pid                   /var/run/nginx.pid;
+worker_processes      auto;
+worker_rlimit_nofile  65535;
+
+# Load modules
+include               /etc/nginx/modules-enabled/*.conf;
+
+events {
+    multi_accept       on;
+    worker_connections 65535;
+}
+
+http {
+    charset                utf-8;
+    sendfile               on;
+    tcp_nopush             on;
+    tcp_nodelay            on;
+    server_tokens          off;
+    log_not_found          off;
+    types_hash_max_size    2048;
+    types_hash_bucket_size 64;
+    client_max_body_size   16M;
+
+    log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                      '\$status \$body_bytes_sent "\$http_referer" '
+                      '"\$http_user_agent" "\$http_x_forwarded_for"';
+
+    # MIME
+    include                mime.types;
+    default_type           application/octet-stream;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+EOL
+    echo "Created Global Nginx nginx.conf config."
+fi
+
+# Create Global Nginx _proxy.conf Configuration
+if [ ! -f "$GLOBAL_NGINX_PROXY" ]; then
+    echo "Global Nginx proxy config not found. Creating..."
+    cat > "$GLOBAL_NGINX_PROXY" <<EOL
 server {
     listen 80;
     server_name ~^(?<subdomain>.+)\.localhost$;
@@ -78,7 +121,7 @@ server {
     error_log /var/log/nginx/error.log debug;
 }
 EOL
-    echo "Created global Nginx configuration."
+    echo "Created global Nginx proxy config."
 fi
 
 # Create Global Docker Compose configuration
@@ -92,7 +135,8 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/proxy.conf
+      - ./nginx/_proxy.conf:/etc/nginx/conf.d/_proxy.conf
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     networks:
       - global_network
 
