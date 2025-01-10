@@ -1,4 +1,4 @@
-A **dynamic *30-seconds* project setup script** for PHP, Nginx, MariaDB and Docker-based environments. 
+A **dynamic *30-seconds* project setup script** for PHP, Nginx, MariaDB, Redis, and Docker-based environments. 
 
 This script automates the process of creating a fully functional PHP project environment with Composer support and Docker integration. It is designed to streamline the development workflow by reducing manual configuration and setup time.
 
