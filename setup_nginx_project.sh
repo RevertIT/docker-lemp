@@ -161,6 +161,15 @@ services:
     networks:
       - global_network
 
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"  # Exposing Redis on the default port
+    networks:
+      - global_network
+    command: ["redis-server", "--requirepass", "root"]  # Set a strong Redis password
+
 networks:
   global_network:
     external: true
@@ -236,8 +245,40 @@ if [ -f "$INDEX_PHP" ]; then
 else
     cat > "$INDEX_PHP" <<EOL
 <?php
-echo "Welcome to $PROJECT_NAME! You can access phpMyAdmin by <a href=\"/phpmyadmin/\" target=\"_blank\">clicking here</a>";
-?>
+
+echo "<h1>Welcome to $PROJECT_NAME!</h1>";
+
+// Redis Connection Test
+echo "<h2>Redis Connection Test</h2>";
+try
+{
+    \$redis = new Redis();
+    \$redis->connect('redis_cache', 6379);
+    \$redis->auth('root');
+    \$redis->set("test_key", "Redis is working!");
+    \$value = \$redis->get("test_key");
+    echo "<p style='color: green;'>Redis Connection Successful: <strong>\$value</strong></p>";
+}
+catch (Exception \$e)
+{
+    echo "<p style='color: red;'>Redis Connection Failed: " . \$e->getMessage() . "</p>";
+}
+
+// MariaDB Connection Test
+echo "<h2>MariaDB Connection Test</h2>";
+\$mysqli = new mysqli('mariadb', 'root', 'root');
+
+if (\$mysqli->connect_error)
+{
+    echo "<p style='color: red;'>MariaDB Connection Failed: " . \$mysqli->connect_error . "</p>";
+}
+else
+{
+    echo "<p style='color: green;'>MariaDB Connection Successful: Connected to MySQL server version " . \$mysqli->server_info . "</p>";
+    \$mysqli->close();
+}
+
+echo "<p>You can access phpMyAdmin by <a href=\"/phpmyadmin/\" target=\"_blank\">clicking here</a>.</p>";
 EOL
     echo "Created index.php file."
 fi
@@ -334,11 +375,17 @@ else
     cat > "$DOCKERFILE" <<EOL
 FROM php:8.4-fpm
 
-# Install PHP extensions
+# Install PHP PDO extensions
 RUN docker-php-ext-install pdo pdo_mysql
+
+# Install PHP mysqli extensions
+RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
 
 # Copy the project files to the container
 COPY . /var/www/${PROJECT_NAME}
