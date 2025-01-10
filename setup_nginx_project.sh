@@ -129,9 +129,9 @@ if [ ! -f "$GLOBAL_NGINX_COMPOSE" ]; then
     echo "Global Docker Compose configuration not found. Creating..."
     cat > "$GLOBAL_NGINX_COMPOSE" <<EOL
 services:
-  global_nginx:
+  nginx:
     image: nginx:latest
-    container_name: global_nginx
+    container_name: nginx_proxy
     ports:
       - "80:80"
     volumes:
@@ -163,7 +163,7 @@ services:
 
   redis:
     image: redis:alpine
-    container_name: redis_cache
+    container_name: redis
     ports:
       - "6379:6379"  # Exposing Redis on the default port
     networks:
@@ -178,7 +178,7 @@ EOL
 fi
 
 # Bring up the global proxy if not already running
-if ! docker ps | grep -q global_nginx; then
+if ! docker ps | grep -q nginx_proxy; then
     echo "Starting global Nginx reverse proxy..."
     docker-compose -f "$GLOBAL_NGINX_COMPOSE" up -d
 else
@@ -253,7 +253,7 @@ echo "<h2>Redis Connection Test</h2>";
 try
 {
     \$redis = new Redis();
-    \$redis->connect('redis_cache', 6379);
+    \$redis->connect('redis', 6379);
     \$redis->auth('root');
     \$redis->set("test_key", "Redis is working!");
     \$value = \$redis->get("test_key");
