@@ -2,7 +2,9 @@ A **dynamic *30-seconds* project setup script** for PHP, Nginx, MariaDB and Dock
 
 This script automates the process of creating a fully functional PHP project environment with Composer support and Docker integration. It is designed to streamline the development workflow by reducing manual configuration and setup time.
 
-Similar to LEMP stack. (Nginx MariaDB PHP)
+Similar to LEMP stack. (Nginx MariaDB PHP Redis)
+
+![image](https://github.com/user-attachments/assets/212b0b58-ffe9-4669-9932-e9a19f551484)
 
 ---
 
