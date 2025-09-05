@@ -1,62 +1,92 @@
-A **dynamic *30-seconds* project setup script** for PHP, Nginx, MariaDB, Redis, and Docker-based environments. 
+A **dynamic **_**30-seconds**_** project setup script** for **PHP or ASP.NET**, Nginx, MariaDB, Redis, and Docker-based environments.
 
-This script automates the process of creating a fully functional PHP project environment with Composer support and Docker integration. It is designed to streamline the development workflow by reducing manual configuration and setup time.
+This script automates the process of creating a fully functional project environment with either PHP (with Composer) or ASP.NET Core (with live-reloading). It is designed to streamline the development workflow by reducing manual configuration and setup time.
 
-Similar to LEMP stack. (Nginx MariaDB PHP Redis)
+Similar to a LEMP stack (Nginx MariaDB PHP Redis) or an ASP.NET Core stack.
 
 ![image](https://github.com/user-attachments/assets/212b0b58-ffe9-4669-9932-e9a19f551484)
 
----
-
 ## **Installation**
 
-Get the `setup_nginx_project.sh` file and double click on Windows if you have git installed, or via terminal `./setup_nginx_project.sh`
+Get the `setup_nginx_project.sh` file and run it. On Windows, you can double-click it if you have Git Bash installed. On Linux/macOS, run it via the terminal: `./setup_nginx_project.sh`
 
-The project name you type will be subdomain, for example if name of the project is skeleton, it will be accessible to `http://skeleton.localhost`
+The project name you type will become the subdomain. For example, if the name of the project is `skeleton`, it will be accessible at `http://skeleton.localhost`.
 
-You can make as many as you want projects.
+You can create as many projects as you want.
 
 ## **Features**
 
-- **Deploy in less than 30 seconds:**
-After downloading necessary docker images, it takes less than 30 seconds to deploy php ready environment with custom nginx server and php configuration which can be changed anytime.
+* **Deploy in less than 30 seconds:** After downloading the necessary Docker images for the first time, it takes less than 30 seconds to deploy a complete, ready-to-code environment.
 
-- **Global Nginx Reverse Proxy:**  
-  Uses global nginx proxy to handle all created containers to correct project location when accesssing via subdomain. eg. http://project1.localhost
+* **Choice of Technology:** The script will prompt you to choose between a classic PHP setup or a modern ASP.NET Core environment.
 
-- **Automated Directory Structure:**  
-  ```plaintext
-  environment/ - the folder you will make to hold the script file
-  └── nginx/ # Location for global nginx config
-      └── default.conf # Global nginx reverse proxy config
-  └── www/ # Location for projects
-      └── <project_name>/
-          ├── public/
-          │   └── index.php      # Default PHP entry point
-          ├── nginx/
-          │   └── site.conf      # Project-specific Nginx configuration
-          ├── composer.json      # Composer initialization file
-          ├── composer.lock      # Composer lock file
-          └── docker-compose.yml # Docker Compose file for the project
-  └── docker-compose.yml # Location for global nginx proxy docker compose file
-  └── setup_nginx_project.sh # File we use to do all the magic
+* **Global Nginx Reverse Proxy:** Uses a global Nginx proxy to handle all created containers, routing traffic to the correct project when you access it via its subdomain (e.g., `http://project1.localhost`).
+
+* **Automated Directory Structure:** The script generates a clean, logical structure for your chosen technology.
+
+  **PHP Structure:**
+
+  ```
+  www/
+  └── <project_name>/
+      ├── public/
+      │   └── index.php
+      ├── nginx/
+      │   └── site.conf
+      ├── logs/
+      ├── Dockerfile
+      └── docker-compose.yml
+
   ```
 
-- **Composer-Ready Setup:**  
-  Installs and initializes Composer in the project, enabling easy dependency management.
+  **ASP.NET Structure:**
 
-- **phpMyAdmin Integration:**  
-  - Configures phpMyAdmin to be accessible at `/phpmyadmin/` in the browser and shares same mariadb server across all containers.
-  - Accessible at `http://project_name.localhost/phpmyadmin/` via Username: root :: Password: root
- 
+  ```
+  www/
+  └── <project_name>/
+      ├── source/
+      │   ├── <project_name>.csproj
+      │   └── Program.cs
+      ├── nginx/
+      │   └── site.conf
+      ├── Dockerfile
+      ├── docker-compose.yml
+      └── docker-compose.override.yml
+
+  ```
+
+* **Ready-to-Code Setup:**
+
+    * **PHP** projects come with `php-fpm`, `mysqli`, and `redis` extensions installed and ready to use.
+
+    * **ASP.NET** projects are configured with `dotnet watch` for instant, live reloading of your code as you make changes.
+
+* **phpMyAdmin Integration:**
+
+    * A global phpMyAdmin container is configured to be accessible at `/phpmyadmin/` on any project URL.
+
+    * Accessible at `http://project_name.localhost/phpmyadmin/` with Username: `root` and Password: `root`.
 
 ## **Useful commands**
 
-- **Access container as root:**
-  In case you need to access container as root user for any reason you can do so by typing into terminal:
-  
-  `docker exec -it php_projectName /bin/bash`
+* **Access container as root:** If you need to access a container's shell (e.g., to install new packages), you can use the `docker exec` command. The command differs slightly depending on the project type.
 
-   *By default, files inside your project folder are automatically linked with container volume, so any changes to your nginx/php files will be reflected without needing to access container as root*
-   
-   *Accessing root will let you also install packages to the container server or updating existing or changing server settings*
+  **For a PHP project:**
+
+  ```
+  docker exec -it php_projectName /bin/bash
+
+  ```
+
+  **For an ASP.NET project:**
+
+  ```
+  docker exec -it projectName_app /bin/bash
+
+  ```
+
+  _(Replace `projectName` with the actual name of your project.)_
+
+    **Note on Live Reloading:** By default, your local project folder is linked to the container volume. 
+    * For **PHP**, any changes you make to `.php` files are reflected instantly. 
+    * For **ASP.NET**, the `dotnet watch` command automatically detects changes, recompiles your application, and restarts the server for you.

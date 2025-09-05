@@ -9,16 +9,15 @@
 ██║  ██║███████╗ ╚████╔╝ ███████╗██║  ██║   ██║   ██║   ██║
 ╚═╝  ╚═╝╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝   ╚═╝
 -------------------------------------------------------------
-Automated Project Setup for PHP, Nginx, and Docker
+Automated Project Setup for PHP/ASP.NET, Nginx, and Docker
 -------------------------------------------------------------
 
-Author: @RevertIT
+Author: @RevertIT & Gemini
 License: MIT
 Copyright (C) 2025 RevertIT
 Description:
-This script automates the creation of a PHP project environment
-with Nginx, Composer, and Docker integration. It is tailored to
-simplify development and minimize repetitive setup tasks.
+This script automates the creation of a PHP or ASP.NET project
+environment with Nginx and Docker integration.
 EOF
 
 # Exit immediately if a command exits with a non-zero status.
@@ -30,8 +29,8 @@ BASE_DIR=$(pwd)
 # Global Nginx setup
 GLOBAL_NGINX_DIR="$BASE_DIR/nginx"
 GLOBAL_NGINX_COMPOSE="$BASE_DIR/docker-compose.yml"
-GLOBAL_NGINX_PROXY="$GLOBAL_NGINX_DIR/_proxy.conf"
-GLOBAL_NGINX_CONFIG="$GLOBAL_NGINX_DIR/nginx.conf"
+GLOBAL_NGINX_PROXY="$BASE_DIR/nginx/_proxy.conf"
+GLOBAL_NGINX_CONFIG="$BASE_DIR/nginx/nginx.conf"
 
 # Ensure the global proxy exists and is running
 echo "Checking global Nginx reverse proxy setup..."
@@ -157,7 +156,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       PMA_ABSOLUTE_URI: "/phpmyadmin/"
     ports:
-      - "8081:80"  # Exposing phpMyAdmin on port 8081 inside the container
+      - "8081:80"
     networks:
       - global_network
 
@@ -165,10 +164,10 @@ services:
     image: redis:alpine
     container_name: redis
     ports:
-      - "6379:6379"  # Exposing Redis on the default port
+      - "6379:6379"
     networks:
       - global_network
-    command: ["redis-server", "--requirepass", "root"]  # Set a strong Redis password
+    command: ["redis-server", "--requirepass", "root"]
 
 networks:
   global_network:
@@ -186,26 +185,23 @@ else
 fi
 
 # Project creation begins here
-
-# Prompt to create a new project
+echo "----------------------------------------------------"
 echo "Do you want to create a new project? (y/n):"
 
 # shellcheck disable=SC2162
 read CREATE_PROJECT
 
-# Check if the input is 'y' or 'yes', otherwise exit the script
 if [[ ! "$CREATE_PROJECT" =~ ^(yes|y|Y)$ ]]; then
-    echo "Project creation canceled. Exiting here."
+    echo "Project creation canceled. Exiting."
     exit 0
 fi
 
 # Prompt for project name
-echo "Enter the project name:"
+echo "Enter the project name (e.g., 'my-app'):"
 
 # shellcheck disable=SC2162
 read PROJECT_NAME
 
-# Ensure project name is not empty
 if [ -z "$PROJECT_NAME" ]; then
     echo "Project name cannot be empty."
     exit 1
@@ -214,198 +210,106 @@ fi
 # Define project directory
 PROJECT_DIR="$BASE_DIR/www/$PROJECT_NAME"
 
-# Check if the project directory already exists
 if [ -d "$PROJECT_DIR" ]; then
     echo "Project '$PROJECT_NAME' already exists. Please choose a different name."
     exit 1
 fi
 
-# Create project directory structure
-echo "Creating project structure for $PROJECT_NAME..."
+# Prompt for technology choice
+echo "Which technology do you want to use? (php/asp):"
+# shellcheck disable=SC2162
+read TECH_CHOICE
 
-if ! mkdir -p "$PROJECT_DIR/nginx" "$PROJECT_DIR/public"; then
-    echo "Failed to create directories for the project. Check file permissions."
-    exit 1
-fi
+# --- PHP Project Setup ---
+if [[ "$TECH_CHOICE" == "php" ]]; then
+    echo "Creating PHP project structure for $PROJECT_NAME..."
+    mkdir -p "$PROJECT_DIR/nginx" "$PROJECT_DIR/public" "$PROJECT_DIR/logs"
 
-# Create logs folder
-LOGS_DIR="$PROJECT_DIR/logs"
+    # <<< UPDATED index.php for PHP with full HTML structure >>>
+    cat > "$PROJECT_DIR/public/index.php" <<EOL
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$PROJECT_NAME</title>
+</head>
+<body>
+    <h1>Welcome to $PROJECT_NAME! (PHP)</h1>
 
-if [ -d "$LOGS_DIR" ]; then
-    echo "Directory '$LOGS_DIR' already exists. Skipping creation."
-else
-    mkdir -p "$PROJECT_DIR/logs"
-    echo "Created logs directory."
-fi
+    <h2>Redis Connection Test</h2>
+    <?php
+    try
+    {
+        \$redis = new Redis();
+        \$redis->connect('redis', 6379);
+        \$redis->auth('root');
+        \$redis->set("test_key", "Redis is working!");
+        \$value = \$redis->get("test_key");
+        echo "<p style='color: green;'>Redis Connection Successful: <strong>\$value</strong></p>";
+    }
+    catch (Exception \$e)
+    {
+        echo "<p style='color: red;'>Redis Connection Failed: " . \$e->getMessage() . "</p>";
+    }
+    ?>
 
-# Create index.php
-INDEX_PHP="$PROJECT_DIR/public/index.php"
-if [ -f "$INDEX_PHP" ]; then
-    echo "File '$INDEX_PHP' already exists. Skipping creation."
-else
-    cat > "$INDEX_PHP" <<EOL
-<?php
-
-echo "<h1>Welcome to $PROJECT_NAME!</h1>";
-
-// Redis Connection Test
-echo "<h2>Redis Connection Test</h2>";
-try
-{
-    \$redis = new Redis();
-    \$redis->connect('redis', 6379);
-    \$redis->auth('root');
-    \$redis->set("test_key", "Redis is working!");
-    \$value = \$redis->get("test_key");
-    echo "<p style='color: green;'>Redis Connection Successful: <strong>\$value</strong></p>";
-}
-catch (Exception \$e)
-{
-    echo "<p style='color: red;'>Redis Connection Failed: " . \$e->getMessage() . "</p>";
-}
-
-// MariaDB Connection Test
-echo "<h2>MariaDB Connection Test</h2>";
-\$mysqli = new mysqli('mariadb', 'root', 'root');
-
-if (\$mysqli->connect_error)
-{
-    echo "<p style='color: red;'>MariaDB Connection Failed: " . \$mysqli->connect_error . "</p>";
-}
-else
-{
-    echo "<p style='color: green;'>MariaDB Connection Successful: Connected to MySQL server version " . \$mysqli->server_info . "</p>";
-    \$mysqli->close();
-}
-
-echo "<p>You can access phpMyAdmin by <a href=\"/phpmyadmin/\" target=\"_blank\">clicking here</a>.</p>";
+    <h2>MariaDB Connection Test</h2>
+    <?php
+    \$mysqli = new mysqli('mariadb', 'root', 'root');
+    if (\$mysqli->connect_error)
+    {
+        echo "<p style='color: red;'>MariaDB Connection Failed: " . \$mysqli->connect_error . "</p>";
+    }
+    else
+    {
+        echo "<p style='color: green;'>MariaDB Connection Successful: Connected to MySQL server version " . \$mysqli->server_info . "</p>";
+        \$mysqli->close();
+    }
+    ?>
+    <p>Access phpMyAdmin <a href="/phpmyadmin/" target="_blank">here</a>.</p>
+</body>
+</html>
 EOL
     echo "Created index.php file."
-fi
 
-# Create Nginx configuration
-NGINX_CONF="$PROJECT_DIR/nginx/site.conf"
-if [ -f "$NGINX_CONF" ]; then
-    echo "Nginx config '$NGINX_CONF' already exists. Skipping creation."
-else
-    cat > "$NGINX_CONF" <<EOL
+    # Create Nginx configuration for PHP
+    cat > "$PROJECT_DIR/nginx/site.conf" <<EOL
 server {
     listen                  80;
     server_name             $PROJECT_NAME.localhost;
     set                     \$base /var/www/${PROJECT_NAME};
     root                    \$base/public;
-
-    # index.php
     index                   index.php;
+    access_log              /var/www/${PROJECT_NAME}/logs/access.log;
+    error_log               /var/www/${PROJECT_NAME}/logs/error.log;
 
-    # Access and error logs inside the project folder
-    access_log /var/www/${PROJECT_NAME}/logs/access.log;
-    error_log /var/www/${PROJECT_NAME}/logs/error.log;
-
-    # security headers
-    add_header X-XSS-Protection          "1; mode=block" always;
-    add_header X-Content-Type-Options    "nosniff" always;
-    add_header Referrer-Policy           "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy   "default-src 'self' http: https: ws: wss: data: blob: 'unsafe-inline'; frame-ancestors 'self';" always;
-    add_header Permissions-Policy        "interest-cohort=()" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # . files
-    location ~ /\.(?!well-known) {
-      deny all;
-    }
-
-    # index.php fallback
     location / {
       try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    # favicon.ico
-    location = /favicon.ico {
-      log_not_found off;
-    }
-
-    # robots.txt
-    location = /robots.txt {
-      log_not_found off;
-    }
-
-    # assets, media
-    location ~* \.(?:css(\.map)?|js(\.map)?|jpe?g|png|gif|ico|cur|heic|webp|tiff?|mp3|m4a|aac|ogg|midi?|wav|mp4|mov|webm|mpe?g|avi|ogv|flv|wmv)$ {
-      expires 7d;
-    }
-
-    # svg, fonts
-    location ~* \.(?:svgz?|ttf|ttc|otf|eot|woff2?)$ {
-      add_header Access-Control-Allow-Origin "*";
-      expires    7d;
-    }
-
-    # gzip
-    gzip            on;
-    gzip_vary       on;
-    gzip_proxied    any;
-    gzip_comp_level 6;
-    gzip_types      text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
-
-    # PHP handling
     location ~ \.php$ {
-      fastcgi_pass                  php_$PROJECT_NAME:9000;
-
-      # default fastcgi_params
-      include                       fastcgi_params;
-
-      # fastcgi settings
-      fastcgi_index                 index.php;
-      fastcgi_buffers               8 16k;
-      fastcgi_buffer_size           32k;
-
+      fastcgi_pass php_${PROJECT_NAME}:9000;
+      include      fastcgi_params;
       fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     }
 }
 EOL
-    echo "Created Nginx config."
-fi
+    echo "Created Nginx config for PHP."
 
-# Create Dockerfile
-DOCKERFILE="$PROJECT_DIR/Dockerfile"
-if [ -f "$DOCKERFILE" ]; then
-    echo "Dockerfile '$DOCKERFILE' already exists. Skipping creation."
-else
-    cat > "$DOCKERFILE" <<EOL
+    # Create Dockerfile for PHP
+    cat > "$PROJECT_DIR/Dockerfile" <<EOL
 FROM php:8.4-fpm
-
-# Install PHP PDO extensions
-RUN docker-php-ext-install pdo pdo_mysql
-
-# Install PHP mysqli extensions
-RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
-
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Install Redis extension
+RUN docker-php-ext-install pdo pdo_mysql mysqli && docker-php-ext-enable mysqli
 RUN pecl install redis && docker-php-ext-enable redis
-
-# Copy the project files to the container
 COPY . /var/www/${PROJECT_NAME}
-
-# Expose PHP-FPM port
 EXPOSE 9000
-
-# Start PHP-FPM
 CMD ["php-fpm"]
-
 EOL
-    echo "Created Dockerfile."
-fi
+    echo "Created Dockerfile for PHP."
 
-# Create Docker Compose file
-DOCKER_COMPOSE="$PROJECT_DIR/docker-compose.yml"
-if [ -f "$DOCKER_COMPOSE" ]; then
-    echo "Docker Compose file '$DOCKER_COMPOSE' already exists. Skipping creation."
-else
-    cat > "$DOCKER_COMPOSE" <<EOL
+    # Create Docker Compose file for PHP
+    cat > "$PROJECT_DIR/docker-compose.yml" <<EOL
 services:
   php:
     build:
@@ -415,7 +319,6 @@ services:
       - "9000"
     volumes:
       - ./:/var/www/${PROJECT_NAME}
-      - ./public:/var/www/${PROJECT_NAME}/public
     networks:
       - global_network
 
@@ -423,9 +326,9 @@ services:
     image: nginx:latest
     container_name: ${PROJECT_NAME}
     volumes:
-      - ./nginx/site.conf:/etc/nginx/conf.d/${PROJECT_NAME}.conf # Mount config file
-      - ./logs:/var/www/${PROJECT_NAME}/logs # Mount logs directory
-      - ./public:/var/www/${PROJECT_NAME}/public # Mount public directory here too for static content (which doesnt go from php fpm)
+      - ./nginx/site.conf:/etc/nginx/conf.d/${PROJECT_NAME}.conf
+      - ./logs:/var/www/${PROJECT_NAME}/logs
+      - ./public:/var/www/${PROJECT_NAME}/public
     networks:
       - global_network
 
@@ -433,18 +336,185 @@ networks:
   global_network:
     external: true
 EOL
-    echo "Created Docker Compose file."
+    echo "Created Docker Compose file for PHP."
+
+# --- ASP.NET Project Setup ---
+elif [[ "$TECH_CHOICE" == "asp" ]]; then
+    echo "Creating ASP.NET project structure for $PROJECT_NAME..."
+    mkdir -p "$PROJECT_DIR/source" "$PROJECT_DIR/nginx"
+
+    # Create Program.cs
+    cat > "$PROJECT_DIR/source/Program.cs" <<EOL
+using System.Text;
+using MySql.Data.MySqlClient;
+using StackExchange.Redis;
+using Microsoft.AspNetCore.Mvc;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddControllers();
+var app = builder.Build();
+
+app.MapGet("/", async (HttpContext context) => {
+    var html = new StringBuilder();
+    html.Append("<!DOCTYPE html><html lang=\"en\"><head><title>$PROJECT_NAME</title></head><body>");
+    html.Append("<h1>Welcome to $PROJECT_NAME! (ASP.NET)</h1>");
+
+    // Redis
+    html.Append("<h2>Redis Connection Test</h2>");
+    try
+    {
+        using var redis = await ConnectionMultiplexer.ConnectAsync("redis,password=root");
+        var db = redis.GetDatabase();
+        await db.StringSetAsync("test_key", "Redis is working!");
+        var value = await db.StringGetAsync("test_key");
+        html.Append($"<p style='color: green;'>Redis Connection Successful: <strong>{value}</strong></p>");
+    }
+    catch (Exception e) { html.Append($"<p style='color: red;'>Redis Connection Failed: {e.Message}</p>"); }
+
+    // MariaDB
+    html.Append("<h2>MariaDB Connection Test</h2>");
+    try
+    {
+        await using var connection = new MySqlConnection("Server=mariadb;User=root;Password=root;");
+        await connection.OpenAsync();
+        html.Append($"<p style='color: green;'>MariaDB Connection Successful: Connected to MySQL server version {connection.ServerVersion}</p>");
+    }
+    catch (Exception e) { html.Append($"<p style='color: red;'>MariaDB Connection Failed: {e.Message}</p>"); }
+
+    html.Append("<p>Access phpMyAdmin <a href=\"/phpmyadmin/\" target=\"_blank\">here</a>.</p>");
+    html.Append("</body></html>");
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(html.ToString());
+});
+
+app.MapControllers();
+app.Run();
+EOL
+    echo "Created Program.cs file."
+
+    # Create .csproj
+    cat > "$PROJECT_DIR/source/$PROJECT_NAME.csproj" <<EOL
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="8.4.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
+  </ItemGroup>
+</Project>
+EOL
+    echo "Created ${PROJECT_NAME}.csproj file."
+
+    # <<< UPDATED Nginx conf for ASP.NET with resilient proxy_pass >>>
+    cat > "$PROJECT_DIR/nginx/site.conf" <<EOL
+server {
+    listen 80;
+    resolver 127.0.0.11 valid=30s;
+    location / {
+        set \$upstream_app http://app:8080;
+        proxy_pass \$upstream_app;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOL
+    echo "Created Nginx config for ASP.NET."
+
+    # Create Dockerfile
+    cat > "$PROJECT_DIR/Dockerfile" <<EOL
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS base
+WORKDIR /source
+EXPOSE 8080
+
+FROM base AS build
+COPY ["source/${PROJECT_NAME}.csproj", "source/"]
+RUN dotnet restore "source/${PROJECT_NAME}.csproj"
+COPY ["source/", "source/"]
+RUN dotnet publish "source/${PROJECT_NAME}.csproj" -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "${PROJECT_NAME}.dll"]
+EOL
+    echo "Created Dockerfile for ASP.NET."
+
+    # <<< UPDATED base docker-compose.yml for ASP.NET with restart policy >>>
+    cat > "$PROJECT_DIR/docker-compose.yml" <<EOL
+services:
+  app:
+    container_name: ${PROJECT_NAME}_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: final
+    networks:
+      - global_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  nginx:
+    image: nginx:latest
+    container_name: ${PROJECT_NAME}
+    restart: unless-stopped
+    volumes:
+      - ./nginx/site.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - global_network
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  global_network:
+    external: true
+EOL
+    echo "Created base Docker Compose file for ASP.NET."
+
+    # Create override file
+    cat > "$PROJECT_DIR/docker-compose.override.yml" <<EOL
+services:
+  app:
+    build:
+      target: base
+    volumes:
+      - ./source:/source
+    command: dotnet watch run --urls "http://+:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+EOL
+    echo "Created Docker Compose override file for ASP.NET development."
+
+else
+    echo "Invalid technology choice. Please enter 'php' or 'asp'."
+    exit 1
 fi
 
-# Bring up the global proxy if not already running
+# Bring up the project
 if ! docker ps | grep -q "$PROJECT_NAME"; then
     echo "Starting $PROJECT_NAME..."
-    docker-compose -f "$PROJECT_DIR"/docker-compose.yml up -d
+    (cd "$PROJECT_DIR" && docker-compose up -d --build)
 else
     echo "$PROJECT_NAME is already running."
 fi
 
+# Disable 'exit on error' to ensure the final message and pause always run
+set +e
+
 # Print success message
-#echo "Project $PROJECT_NAME setup is complete!"
-#echo "To start the project, run:"
-#echo "docker-compose -f $PROJECT_DIR/docker-compose.yml up -d"
+echo "----------------------------------------------------"
+echo "✅ Project '$PROJECT_NAME' setup is complete!"
+echo "Access your project at: http://${PROJECT_NAME}.localhost"
+echo "----------------------------------------------------"
+
+# Pause the script until the user presses Enter
+read -p "Press [Enter] to exit..."
