@@ -440,7 +440,7 @@ try {
 <main>
     <section class="hero">
         <div class="intro">
-            <div class="eyebrow">PHP 8.4 + Nginx + MariaDB + Redis</div>
+            <div class="eyebrow">PHP 8.5 + Nginx + MariaDB + Redis</div>
             <h1>${project}</h1>
             <p>This workspace is ready for local development. Edit files in <code>www/${project}/public</code> and refresh the browser.</p>
             <div class="actions">
@@ -501,7 +501,7 @@ server {
 EOF
 
     cat > "$dir/Dockerfile" <<'EOF'
-FROM php:8.4-fpm
+FROM php:8.5-fpm
 
 RUN docker-php-ext-install pdo pdo_mysql mysqli \
     && pecl install redis \
@@ -764,16 +764,18 @@ EOF
 
 choose_technology() {
     local choice
+    local normalized
 
-    echo "Choose a project type:"
-    echo "  1) PHP 8.4 with php-fpm"
-    echo "  2) ASP.NET 8 with dotnet watch"
-    echo
-    choice="$(prompt "Type 1, 2, php, or asp" "php")"
+    echo "Project type:" >&2
+    echo "  php  PHP 8.5 with php-fpm" >&2
+    echo "  asp  ASP.NET 8 with dotnet watch" >&2
+    echo >&2
+    choice="$(prompt "Project type" "php")"
+    normalized="$(echo "$choice" | tr '[:upper:]' '[:lower:]')"
 
-    case "$choice" in
-        1|php|PHP) echo "php" ;;
-        2|asp|ASP|aspnet|dotnet) echo "asp" ;;
+    case "$normalized" in
+        php) echo "php" ;;
+        asp|aspnet|dotnet) echo "asp" ;;
         *) fail "Unknown project type '$choice'." ;;
     esac
 }

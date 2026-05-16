@@ -5,7 +5,7 @@ Create local PHP or ASP.NET projects behind one shared Nginx reverse proxy.
 The script builds a Docker-based development environment with:
 
 - Nginx reverse proxy for `http://project-name.localhost`
-- PHP 8.4 with php-fpm, MariaDB, Redis, and phpMyAdmin
+- PHP 8.5 with php-fpm, MariaDB, Redis, and phpMyAdmin
 - ASP.NET 8 with `dotnet watch`, MariaDB, Redis, and phpMyAdmin
 - A shared external Docker network named `global_network`
 - A graphical starter page that checks Redis and MariaDB from the app
