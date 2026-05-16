@@ -1,92 +1,158 @@
-A **dynamic **_**30-seconds**_** project setup script** for **PHP or ASP.NET**, Nginx, MariaDB, Redis, and Docker-based environments.
+# Local LEMP Launcher
 
-This script automates the process of creating a fully functional project environment with either PHP (with Composer) or ASP.NET Core (with live-reloading). It is designed to streamline the development workflow by reducing manual configuration and setup time.
+Create local PHP or ASP.NET projects behind one shared Nginx reverse proxy.
 
-Similar to a LEMP stack (Nginx MariaDB PHP Redis) or an ASP.NET Core stack.
+The script builds a Docker-based development environment with:
 
-![image](https://github.com/user-attachments/assets/212b0b58-ffe9-4669-9932-e9a19f551484)
+- Nginx reverse proxy for `http://project-name.localhost`
+- PHP 8.4 with php-fpm, MariaDB, Redis, and phpMyAdmin
+- ASP.NET 8 with `dotnet watch`, MariaDB, Redis, and phpMyAdmin
+- A shared external Docker network named `global_network`
+- A graphical starter page that checks Redis and MariaDB from the app
 
-## **Installation**
+## First Run
 
-Get the `setup_nginx_project.sh` file and run it. On Windows, you can double-click it if you have Git Bash installed. On Linux/macOS, run it via the terminal: `./setup_nginx_project.sh`
+Run the setup script from this directory:
 
-The project name you type will become the subdomain. For example, if the name of the project is `skeleton`, it will be accessible at `http://skeleton.localhost`.
+```bash
+./setup_nginx_project.sh
+```
 
-You can create as many projects as you want.
+On Windows, run it from Git Bash. If the file is not executable on Linux or macOS, run:
 
-## **Features**
+```bash
+chmod +x setup_nginx_project.sh
+./setup_nginx_project.sh
+```
 
-* **Deploy in less than 30 seconds:** After downloading the necessary Docker images for the first time, it takes less than 30 seconds to deploy a complete, ready-to-code environment.
+The script now creates the missing global Docker network automatically:
 
-* **Choice of Technology:** The script will prompt you to choose between a classic PHP setup or a modern ASP.NET Core environment.
+```bash
+docker network create global_network
+```
 
-* **Global Nginx Reverse Proxy:** Uses a global Nginx proxy to handle all created containers, routing traffic to the correct project when you access it via its subdomain (e.g., `http://project1.localhost`).
+You do not need to create it manually. This fixes the common Docker Compose error:
 
-* **Automated Directory Structure:** The script generates a clean, logical structure for your chosen technology.
+```text
+network global_network declared as external, but could not be found
+```
 
-  **PHP Structure:**
+## How It Works
 
-  ```
-  www/
-  └── <project_name>/
-      ├── public/
-      │   └── index.php
-      ├── nginx/
-      │   └── site.conf
-      ├── logs/
-      ├── Dockerfile
-      └── docker-compose.yml
+The first part of the script starts shared services from the root `docker-compose.yml`:
 
-  ```
+- `nginx_proxy` listens on port `80`
+- `mariadb` stores databases in a Docker volume
+- `redis` stores data in a Docker volume
+- `phpmyadmin` is available through the proxy and on port `8081`
 
-  **ASP.NET Structure:**
+After the shared services are running, the script can create a project in:
 
-  ```
-  www/
-  └── <project_name>/
-      ├── source/
-      │   ├── <project_name>.csproj
-      │   └── Program.cs
-      ├── nginx/
-      │   └── site.conf
-      ├── Dockerfile
-      ├── docker-compose.yml
-      └── docker-compose.override.yml
+```text
+www/<project-name>/
+```
 
-  ```
+The project name becomes the local subdomain. A project named `billing-api` is available at:
 
-* **Ready-to-Code Setup:**
+```text
+http://billing-api.localhost
+```
 
-    * **PHP** projects come with `php-fpm`, `mysqli`, and `redis` extensions installed and ready to use.
+phpMyAdmin is available at:
 
-    * **ASP.NET** projects are configured with `dotnet watch` for instant, live reloading of your code as you make changes.
+```text
+http://billing-api.localhost/phpmyadmin/
+```
 
-* **phpMyAdmin Integration:**
+Login:
 
-    * A global phpMyAdmin container is configured to be accessible at `/phpmyadmin/` on any project URL.
+- Server: `mariadb`
+- Username: `root`
+- Password: `root`
 
-    * Accessible at `http://project_name.localhost/phpmyadmin/` with Username: `root` and Password: `root`.
+## Project Types
 
-## **Useful commands**
+### PHP
 
-* **Access container as root:** If you need to access a container's shell (e.g., to install new packages), you can use the `docker exec` command. The command differs slightly depending on the project type.
+Generated structure:
 
-  **For a PHP project:**
+```text
+www/<project-name>/
+  public/
+    index.php
+  nginx/
+    site.conf
+  logs/
+  Dockerfile
+  docker-compose.yml
+```
 
-  ```
-  docker exec -it php_projectName /bin/bash
+The starter page includes a responsive visual dashboard and live checks for MariaDB and Redis. Edit PHP files in `public/` and refresh the browser.
 
-  ```
+Useful shell:
 
-  **For an ASP.NET project:**
+```bash
+docker exec -it php-<project-name> bash
+```
 
-  ```
-  docker exec -it projectName_app /bin/bash
+### ASP.NET
 
-  ```
+Generated structure:
 
-  _(Replace `projectName` with the actual name of your project.)_
+```text
+www/<project-name>/
+  source/
+    Program.cs
+    <project-name>.csproj
+  nginx/
+    site.conf
+  Dockerfile
+  docker-compose.yml
+  docker-compose.override.yml
+```
 
-    **Note on Live Reloading:** By default, your local project folder is linked to the container volume. 
-    * For **PHP**, any changes you make to `.php` files are reflected instantly. 
-    * For **ASP.NET**, the `dotnet watch` command automatically detects changes, recompiles your application, and restarts the server for you.
+The override file runs `dotnet watch`, so edits in `source/` restart the app automatically.
+
+Useful shell:
+
+```bash
+docker exec -it app-<project-name> bash
+```
+
+## Common Commands
+
+From the root directory:
+
+```bash
+docker compose ps
+docker compose logs -f
+docker compose up -d
+docker compose down
+```
+
+From a project directory:
+
+```bash
+cd www/<project-name>
+docker compose ps
+docker compose logs -f
+docker compose up -d --build
+docker compose down
+```
+
+## Ports
+
+The default ports are:
+
+- `80`: global Nginx reverse proxy
+- `8081`: direct phpMyAdmin access
+- `6379`: Redis
+
+If port `80` is already used by IIS, Apache, another Nginx instance, or another Docker stack, stop that service before running the launcher.
+
+## Notes
+
+- Project names are normalized to lowercase letters, numbers, and dashes.
+- Every project joins the same external Docker network so Nginx can route by container name.
+- MariaDB and Redis data persist in Docker volumes.
+- The generated starter pages are meant to be replaced by your application code.
